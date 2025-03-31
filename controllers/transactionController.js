@@ -91,50 +91,50 @@ generateTrade = async (quantity, price, type, fee)=>{
 
 getFifoTransaction = async (transactions)=>{
   var portfolio = new Map();
-    for(let i = 0; i < transactions.length; i++) {
-      let {stockSymbol, type, quantity, price, fee} = transactions[i];
-      let trade = await generateTrade(quantity, price, type, fee);
+  for(let i = 0; i < transactions.length; i++) {
+    let {stockSymbol, type, quantity, price, fee} = transactions[i];
+    let trade = await generateTrade(quantity, price, type, fee);
 
-      if(type == "BUY") {
-        let activeTrades = portfolio.get(stockSymbol);
-        
-        if(!activeTrades){
-          portfolio.set(stockSymbol, [trade]);
-        } else {
-          activeTrades.push(trade);
-        }
-      }
-
-      if(type == "SELL") {
-        let activeTrades = portfolio.get(stockSymbol.toString());
-        if (activeTrades) {
-          let sharesToSell = quantity;
-          while (sharesToSell > 0) {
-            if(activeTrades.length > 0) {
-              let itemToSell = activeTrades[0];
-              itemToSell.quantity = itemToSell.quantity;
-
-              if(itemToSell.quantity == sharesToSell) {
-                sharesToSell = 0;
-                activeTrades.splice(0,1);
-              } else if (itemToSell.shares < sharesToSell){
-                sharesToSell -= itemToSell.quantity;
-                activeTrades.splice(0,1);
-              } else {
-                itemToSell.quantity-= sharesToSell;
-                sharesToSell = 0;
-              }
-            }
-          }
-
-          if(activeTrades.length == 0) {
-            portfolio.delete(stockSymbol);
-          }
-        }
+    if(type == "BUY") {
+      let activeTrades = portfolio.get(stockSymbol);
+      
+      if(!activeTrades){
+        portfolio.set(stockSymbol, [trade]);
+      } else {
+        activeTrades.push(trade);
       }
     }
 
-    return portfolio;
+    if(type == "SELL") {
+      let activeTrades = portfolio.get(stockSymbol.toString());
+      if (activeTrades) {
+        let sharesToSell = quantity;
+        while (sharesToSell > 0) {
+          if(activeTrades.length > 0) {
+            let itemToSell = activeTrades[0];
+            itemToSell.quantity = itemToSell.quantity;
+
+            if(itemToSell.quantity == sharesToSell) {
+              sharesToSell = 0;
+              activeTrades.splice(0,1);
+            } else if (itemToSell.shares < sharesToSell){
+              sharesToSell -= itemToSell.quantity;
+              activeTrades.splice(0,1);
+            } else {
+              itemToSell.quantity-= sharesToSell;
+              sharesToSell = 0;
+            }
+          }
+        }
+
+        if(activeTrades.length == 0) {
+          portfolio.delete(stockSymbol);
+        }
+      }
+    }
+  }
+
+  return portfolio;
 }
 
 getSortPortfolio = async (portfolio,stockInfos)=>{
@@ -166,14 +166,14 @@ getSortPortfolio = async (portfolio,stockInfos)=>{
 }
 
 getStockInfo = async (portfolio)=>{
-    let urls = [];
-    let stockInfos = new Map();
-    let pseUri = process.env.PSE_API_URI
-    portfolio.forEach(async(value,key)=>{
-      urls.push(`${pseUri}/stocks/${key}.json`)
-    });
-    const promises = urls.map(url => axios.get(url));
-    const responses = await Promise.all(promises);
-    responses.forEach(response => stockInfos.set(response.data.stock[0].symbol, response.data.stock[0]));
-    return stockInfos;
+  let urls = [];
+  let stockInfos = new Map();
+  let pseUri = process.env.PSE_API_URI
+  portfolio.forEach(async(value,key)=>{
+    urls.push(`${pseUri}/stocks/${key}.json`);
+  });
+  const promises = urls.map(url => axios.get(url));
+  const responses = await Promise.all(promises);
+  responses.forEach(response => stockInfos.set(response.data.stock[0].symbol, response.data.stock[0]));
+  return stockInfos;
 }
