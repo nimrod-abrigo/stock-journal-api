@@ -37,8 +37,9 @@ exports.getPortfolio = async (req,res) => {
   try {
     const transactions = await getRecordsByUserId(req.user.id, ASC);
     const portfolio = await getFifoTransaction(transactions);
+    const dividend =  await getDividend(transactions);
     const stockInfos = await getStockInfo(portfolio);
-    const returnArray = await getSortPortfolio(portfolio, stockInfos);
+    const returnArray = await getSortPortfolio(portfolio, stockInfos, dividend);
     
     res.status(200).json(returnArray);
   }catch(error){
@@ -89,6 +90,23 @@ generateTrade = async (quantity, price, type, fee)=>{
   };
 }
 
+getDividend = async (transactions)=>{
+  let dividendMap = new Map();
+  for(let i = 0; i < transactions.length; i++) {
+    let {stockSymbol, type, quantity, price, fee} = transactions[i];
+    if(type == "DIVIDEND") {
+      let cur_dividend = quantity*price-fee;
+      if(dividendMap.has(stockSymbol)) {
+        let dividend_value = dividendMap.get(stockSymbol);
+        dividendMap.set(stockSymbol, cur_dividend + dividend_value);
+      }else {
+        dividendMap.set(stockSymbol, cur_dividend);
+      }
+    }
+  }
+  return dividendMap;
+}
+
 getFifoTransaction = async (transactions)=>{
   var portfolio = new Map();
   for(let i = 0; i < transactions.length; i++) {
@@ -137,7 +155,7 @@ getFifoTransaction = async (transactions)=>{
   return portfolio;
 }
 
-getSortPortfolio = async (portfolio,stockInfos)=>{
+getSortPortfolio = async (portfolio,stockInfos, dividend)=>{
   let portfolioSorted = new Map([...portfolio.entries()].sort());
   let returnArray = [];
 
@@ -146,20 +164,31 @@ getSortPortfolio = async (portfolio,stockInfos)=>{
     let totalCost = 0;
     let avgPrice = 0;
     let {name, price} = stockInfos.get(key);
+    let totalDiv = dividend.get(key);
     let marketValue = 0;
-    let totalGainAmount = 0;
-    let totalPercentage = 0;
+    let capitalGainAmount = 0;
+    let capitalGainPercentage = 0;
 
     value.map(trade => {
       shares += trade.quantity;
       totalCost = Number(trade.quantity * trade.price).toFixed(2);
       marketValue = Number(price.amount * trade.quantity).toFixed(2);
-      totalGainAmount = Number(marketValue - totalCost).toFixed(2);
-      totalPercentage = `${Number(totalGainAmount / totalCost * 100).toFixed(2)}%`;
+      capitalGainAmount = Number(marketValue - totalCost).toFixed(2);
+      capitalGainPercentage = `${Number(capitalGainAmount / totalCost * 100).toFixed(2)}%`;
     });
 
     avgPrice = Number(totalCost / shares).toFixed(2);
-    returnArray.push({stockSymbol:key, name, shares, avgPrice, currentPrice: price.amount, totalCost, marketValue, totalGainAmount, totalPercentage}); 
+    returnArray.push({
+      stockSymbol:key, 
+      name, shares, 
+      avgPrice, 
+      currentPrice: price.amount, 
+      totalCost, 
+      marketValue, 
+      capitalGainAmount, 
+      capitalGainPercentage, 
+      totalDiv
+    }); 
   });
 
   return returnArray;
