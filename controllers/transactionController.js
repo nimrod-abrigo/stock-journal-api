@@ -1,4 +1,7 @@
 const Transaction = require('../models/Transaction');
+const express = require('express');
+const axios = require('axios');
+const app = express();
 const ASC = 1;
 const DESC = -1;
 
@@ -34,7 +37,8 @@ exports.getPortfolio = async (req,res) => {
   try {
     const transactions = await getRecordsByUserId(req.user.id, ASC);
     const portfolio = await getFifoTransaction(transactions);
-    const returnArray = await getSortPortfolio(portfolio);
+    const stockInfos = await getStockInfo(portfolio);
+    const returnArray = await getSortPortfolio(portfolio, stockInfos);
     
     res.status(200).json(returnArray);
   }catch(error){
@@ -133,7 +137,7 @@ getFifoTransaction = async (transactions)=>{
     return portfolio;
 }
 
-getSortPortfolio = async (portfolio)=>{
+getSortPortfolio = async (portfolio,stockInfos)=>{
   let portfolioSorted = new Map([...portfolio.entries()].sort());
   let returnArray = [];
 
@@ -141,15 +145,30 @@ getSortPortfolio = async (portfolio)=>{
     let shares = 0;
     let totalCost = 0;
     let avgPrice = 0;
+    let {name, price} = stockInfos.get(key);
+    let marketValue = 0;
 
     value.map(trade => {
       shares += trade.quantity;
       totalCost += trade.quantity * trade.price;
+      marketValue = price.amount * trade.quantity;
     });
 
-    avgPrice = Number(totalCost / shares).toFixed(4);
-    returnArray.push([key, shares, avgPrice]); 
+    avgPrice = Number(totalCost / shares).toFixed(2);
+    returnArray.push({stockSymbol:key, name, shares, avgPrice, currentPrice: price.amount, totalCost, marketValue}); 
   });
 
   return returnArray;
+}
+
+getStockInfo = async (portfolio)=>{
+    let urls = [];
+    let stockInfos = new Map();
+    portfolio.forEach(async(value,key)=>{
+      urls.push(`https://phisix-api3.appspot.com/stocks/${key}.json`)
+    });
+    const promises = urls.map(url => axios.get(url));
+    const responses = await Promise.all(promises);
+    responses.forEach(response => stockInfos.set(response.data.stock[0].symbol, response.data.stock[0]));
+    return stockInfos;
 }
