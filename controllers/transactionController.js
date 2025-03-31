@@ -164,8 +164,9 @@ getSortPortfolio = async (portfolio,stockInfos)=>{
 getStockInfo = async (portfolio)=>{
     let urls = [];
     let stockInfos = new Map();
+    let pseUri = process.env.PSE_API_URI
     portfolio.forEach(async(value,key)=>{
-      urls.push(`https://phisix-api3.appspot.com/stocks/${key}.json`)
+      urls.push(`${pseUri}/stocks/${key}.json`)
     });
     const promises = urls.map(url => axios.get(url));
     const responses = await Promise.all(promises);
