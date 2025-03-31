@@ -147,15 +147,19 @@ getSortPortfolio = async (portfolio,stockInfos)=>{
     let avgPrice = 0;
     let {name, price} = stockInfos.get(key);
     let marketValue = 0;
+    let totalGainAmount = 0;
+    let totalPercentage = 0;
 
     value.map(trade => {
       shares += trade.quantity;
-      totalCost += trade.quantity * trade.price;
-      marketValue = price.amount * trade.quantity;
+      totalCost = Number(trade.quantity * trade.price).toFixed(2);
+      marketValue = Number(price.amount * trade.quantity).toFixed(2);
+      totalGainAmount = Number(marketValue - totalCost).toFixed(2);
+      totalPercentage = `${Number(totalGainAmount / totalCost * 100).toFixed(2)}%`;
     });
 
     avgPrice = Number(totalCost / shares).toFixed(2);
-    returnArray.push({stockSymbol:key, name, shares, avgPrice, currentPrice: price.amount, totalCost, marketValue}); 
+    returnArray.push({stockSymbol:key, name, shares, avgPrice, currentPrice: price.amount, totalCost, marketValue, totalGainAmount, totalPercentage}); 
   });
 
   return returnArray;
