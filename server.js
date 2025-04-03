@@ -3,11 +3,13 @@ const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
+const cors = require('cors');
 
 dotenv.config();
 connectDB();
 
 const app = express();
+app.use(cors({ origin: 'http://localhost:4200' }));
 app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);

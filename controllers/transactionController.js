@@ -44,7 +44,7 @@ exports.getPortfolio = async (req,res) => {
     res.status(200).json(returnArray);
   }catch(error){
     console.error(error);
-    res.status(500).json({ msg: error});
+    res.status(500).json({ msg: "Server error" });
   }
 };
 
@@ -73,9 +73,24 @@ exports.updateTransaction = async (req, res) => {
     res.json(transaction);
   }catch(error){
     console.error(error);
-    res.status(500).json({ msg: error});
+    res.status(500).json({ msg: "Server error"});
   }
 };
+
+exports.deleteTransaction = async (req, res) => {
+  try{
+    const transactionId = req.params.id;
+
+    // Check if transaction exists and belongs to the logged-in user
+    let transaction = await Transaction.findById(transactionId);
+    if (!transaction) return res.status(404).json({ msg: "Transaction not found" });
+
+    
+  }catch(error){
+    console.error(error);
+    res.status(500).json({ msg: "Server error"});
+  }
+}
 
 getRecordsByUserId = async (id, sort)=>{
     return await Transaction.find({ user: id}).sort({ date: sort });
