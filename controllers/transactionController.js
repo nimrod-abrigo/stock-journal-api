@@ -70,7 +70,7 @@ exports.updateTransaction = async (req, res) => {
     transaction.date = new Date(date)||transaction.date;
 
     await transaction.save();
-    res.json(transaction);
+    res.json({msg:"Update Success"}, transaction);
   }catch(error){
     console.error(error);
     res.status(500).json({ msg: "Server error"});
@@ -85,7 +85,9 @@ exports.deleteTransaction = async (req, res) => {
     let transaction = await Transaction.findById(transactionId);
     if (!transaction) return res.status(404).json({ msg: "Transaction not found" });
 
-    
+    let {acknowledged, deletedCount} = await Transaction.deleteOne({ _id: transactionId });
+    if (deletedCount == 1) res.json({msg:"Delete Success", acknowledged, deletedCount}); 
+    else res.status(500).json({msg: "delete failed", acknowledged, deletedCount});
   }catch(error){
     console.error(error);
     res.status(500).json({ msg: "Server error"});
