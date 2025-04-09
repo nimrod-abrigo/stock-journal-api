@@ -24,6 +24,28 @@ exports.createTransaction = async (req, res) => {
   }
 };
 
+exports.createTransactionMany = async (req, res) => {
+  try {
+    const transactions = req.body;
+
+    if (!Array.isArray(transactions) || transactions.length === 0) {
+      return res.status(400).json({ msg: "Invalid transactions data" });
+    }
+
+    // Add user ID to each transaction before inserting
+    const transactionsWithUser = transactions.map(tx => ({
+      ...tx,
+      user: req.user.id,
+    }));
+
+    const savedTransactions = await Transaction.insertMany(transactionsWithUser);
+    res.status(201).json(savedTransactions);
+  } catch (error) {
+    console.error("Error inserting transactions:", error);
+    res.status(500).json({ msg: error });
+  }
+};
+
 exports.getTransactions = async (req, res) => {
   try {
     const transactions = await getRecordsByUserId(req.user.id, DESC)
@@ -37,9 +59,9 @@ exports.getPortfolio = async (req,res) => {
   try {
     const transactions = await getRecordsByUserId(req.user.id, ASC);
     const portfolio = await getFifoTransaction(transactions);
-    //const dividend =  await getDividend(transactions);
+    const dividend =  await getDividend(transactions);
     const stockInfos = await getStockInfo(portfolio);
-    const returnArray = await getSortPortfolio(portfolio, stockInfos, dividend=0);
+    const returnArray = await getSortPortfolio(portfolio, stockInfos, dividend);
     
     res.status(200).json(returnArray);
   }catch(error){
@@ -181,10 +203,12 @@ getSortPortfolio = async (portfolio,stockInfos, dividend)=>{
     let totalCost = 0;
     let avgPrice = 0;
     let {name, price} = stockInfos.get(key);
-    //let totalDiv = dividend.get(key);
+    let totalDiv = dividend.get(key);
     let marketValue = 0;
     let capitalGainAmount = 0;
     let capitalGainPercentage = 0;
+
+    if(price.amount == 0) price.amount = avgPrice;
 
     value.map(trade => {
       shares += trade.quantity;
@@ -197,14 +221,15 @@ getSortPortfolio = async (portfolio,stockInfos, dividend)=>{
     avgPrice = totalCost / shares;
     returnArray.push({
       stockSymbol:key, 
-      name, shares, 
+      name, 
+      shares, 
       avgPrice, 
       currentPrice: price.amount, 
       totalCost, 
       marketValue, 
       capitalGainAmount, 
       capitalGainPercentage, 
-      //totalDiv
+      totalDiv
     }); 
   });
 
@@ -220,6 +245,9 @@ getStockInfo = async (portfolio)=>{
   });
   const promises = urls.map(url => axios.get(url));
   const responses = await Promise.all(promises);
-  responses.forEach(response => stockInfos.set(response.data.stock[0].symbol, response.data.stock[0]));
+  responses.forEach((response) => {
+    if (response.status == 200) stockInfos.set(response.data.stock[0].symbol, response.data.stock[0]);
+    else stockInfos.set(key, {name:"", price: {amount: 0}});
+  });
   return stockInfos;
 }
